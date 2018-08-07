@@ -20,7 +20,9 @@ if (!dir.exists(outdir)) {
 
 setwd(workdir)
 
-for (i in 1:dim(dataloc)[1]) {
+whichcomp=2
+
+for (i in seq(whichcomp, dim(dataloc)[1], 3) {
     print(file.exists(dataloc$ill.r1))
     print(file.exists(dataloc$ill.r2))
 
