@@ -43,21 +43,33 @@ meta$drug[grepl("bft2", meta$samp)]="bft2"
 
 
 ##Setup reference locations
-ref="/mithril/Data/NGS/Reference/human_hisat38/genome_tran"
-gtfref="/mithril/Data/NGS/Reference/human_hisat38/hg38_ucsc.annotated.gtf"
+##Get gencode reference
 
+
+ref="/mithril/Data/NGS/Reference/human_genes/gencode.v27.salmon"
+##Make index
+if (FALSE) {
+    ##wget ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_27/gencode.v27.transcripts.fa.gz
+    system(paste0("~/Code/salmon/bin/salmon index --gencode -p 10 ",
+                  "-t /mithril/Data/NGS/Reference/human_genes/gencode.v27.transcripts.fa.gz -i ",
+                  ref))
+}
+    
+
+    
 ##Setup output locations
-outdir="/atium/Data/NGS/Aligned/170613_fragillis/"
-meta$bamout=NA
+outdir="/atium/Data/NGS/Aligned/170613_fragillis/salmon/"
 
 
 if (TRUE) {
 
+    meta$salmon.out=file.path(outdir, paste0(meta$samp, ".quant"))
+    
     ##loop through all samples
-    #for (i in 1:dim(meta)[1]) {
-    for (i in 1:1) { 
+    for (i in 1:dim(meta)[1]) {
+    #for (i in 1:1) { 
 
-        meta$bamout[i]=file.path(outdir, "aligned", paste0(meta$samp[i], ".sorted.bam"))
+
         ##If paired, do paired alignment, otherwise, single end
         if (meta$paired[i]) {
             ##Get reads, cat, and trim in tmp dir          
@@ -71,35 +83,29 @@ if (TRUE) {
                           "-A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT ",
                           "-q 20 -o /tmp/read1.trim.fq.gz -p /tmp/read2.trim.fq.gz -pe1 /tmp/read1.fq.gz -pe2 /tmp/read2.fq.gz"))
 
-            system(paste0("hisat2 --threads 10 --tmo -x ", ref ," -1 ", "/tmp/read1.trim.fq.gz", " -2 ", "/tmp/read2.trim.fq.gz",
-                          " | samtools view -b - | samtools sort -o ", meta$bamout[i]))
 
-            
-#            system(paste0("hisat2 --threads 10 --tmo -x ", ref ," -1 ", read1, " -2 ", read2,
-#                          " | samtools view -b - | samtools sort -o ", meta$bamout[i]))
+            system(paste0("~/Code/salmon/bin/salmon quant -i ", ref," -l A",
+                          " -1 /tmp/read1.trim.fq.gz ",
+                          " -2 /tmp/read2.trim.fq.gz ",
+                          "-p 8 -o ", meta$salmon.out[i]))
+
+            system("rm /tmp/read*.gz")
             
         } else {
-            read1=paste(list.files(path=meta$rawdir[i], pattern=paste0("*", meta$idx[i], "_1.fastq.gz"), full.names=T), collapse=",")
-            system(paste0("hisat2 --threads 10 --tmo -x ", ref ," -U ", read1, 
-                          " | samtools view -b - | samtools sort -o ", meta$bamout[i]))
+            read1=list.files(path=meta$rawdir[i], pattern=paste0("*", meta$idx[i], "_1.fastq.gz"), full.names=T)                        
+
+            system(paste0("cat ", paste(read1, collapse=" "), " >/tmp/read1.fq.gz"))
+
+            system(paste0("atropos -T 6 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC ",
+                          "-q 20 -o /tmp/read1.trim.fq.gz -se /tmp/read1.fq.gz"))
+
+            system(paste0("~/Code/salmon/bin/salmon quant -i ", ref," -l A",
+                          " -r /tmp/read1.trim.fq.gz ",
+                          "-p 8 -o ", meta$salmon.out[i]))
+
+            system("rm /tmp/read*.gz")
         }
     }
 
 }
-
-##Stringtie
-
-meta$ballout=NA
-
-if (TRUE) {
-
-    ##for (i in 1:dim(meta)[1]) {
-    for (i in 1:1) {
-        meta$ballout[i]=file.path(outdir, "ballgown", paste0(meta$samp[i], ".gtf"))
-        
-        system(paste0("stringtie -e -B -p 10 -G ", gtfref, " -o ", meta$ballout[i], " ", meta$bamout[i]))
-    }
-
-}
-
 

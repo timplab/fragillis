@@ -1,0 +1,34 @@
+{
+    "atac.pipeline.type" : "atac",
+    "atac.genome_tsv" : "/home/timp/Code/atac-seq-pipeline/installers/human/hg38.tsv",
+    "atac.fastqs" : [
+	[
+	    ["/atium/Data/NGS/Aligned/170423_atacseq_JA/raw_data_renamed/24hrbft2_031_read1.fastq.gz",
+	     "/atium/Data/NGS/Aligned/170423_atacseq_JA/raw_data_renamed/24hrbft2_031_read2.fastq.gz"]
+	],
+	[
+	    ["/atium/Data/NGS/Aligned/170423_atacseq_JA/raw_data_renamed/24hrbft2_220_read1.fastq.gz",
+	     "/atium/Data/NGS/Aligned/170423_atacseq_JA/raw_data_renamed/24hrbft2_220_read2.fastq.gz"]
+	],
+	[
+	    ["/atium/Data/NGS/Aligned/170423_atacseq_JA/raw_data_renamed/trial1/24hrbft2_icat_1.fastq.gz",
+	     "/atium/Data/NGS/Aligned/170423_atacseq_JA/raw_data_renamed/trial1/24hrbft2_icat_2.fastq.gz"]
+	]
+    ],
+
+    "atac.paired_end" : true,
+    "atac.multimapping" : 4,
+
+    "atac.trim_adapter.auto_detect_adapter" : true,
+
+    "atac.smooth_win" : 73,
+    "atac.enable_idr" : true,
+    "atac.idr_thresh" : 0.05,
+
+    "atac.qc_report.name" : "24hrbft2",
+    "atac.qc_report.desc" : "ATAC-seq on 24hr-bft2 treated"
+}
+	    
+	
+    
+    
