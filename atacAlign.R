@@ -22,7 +22,6 @@ if (!dir.exists(outdir)) {
 
 setwd(workdir)
 
-
 if (FALSE) {
     ##Distribute which set to 3 different computers by changing the starting index
     for (i in seq(1, dim(dataloc)[1], 3)) {
