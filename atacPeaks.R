@@ -107,8 +107,31 @@ res.filt=res %>%
     filter(pvalue<.01) %>%
     left_join(merged)
 
-sig..gr=peak2gr(res.filt)
+write_csv(res.filt, file.path(outdir, "24hrsig.csv"))
 
-sum(overlapsAny(sig.24.gr, ori.24open.gr))/length(sig.24.gr)
+res.open=filter(res.filt, stat>0)
+res.close=filter(res.filt, stat<0)
+
+sig.24.op.gr=peak2gr(res.open)
+sig.24.cl.gr=peak2gr(res.close)
+
+sum(overlapsAny(sig.24.op.gr, ori.24open.gr))/length(sig.24.op.gr)
 sum(overlapsAny(sig.24.gr, ori.24close.gr))/length(sig.24.gr)
 
+##make MA plot
+
+##look at promoter regions
+if (FALSE) {
+    library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+    library(org.Hs.eg.db)
+    promoters=promoters(TxDb.Hsapiens.UCSC.hg38.knownGene)
+    
+    sum(overlapsAny(sig.24.gr, promoters))
+
+    sig.prom=subsetByOverlaps(promoters, sig.24.gr)
+
+    sig.genes=select(TxDb.Hsapiens.UCSC.hg38.knownGene, keys=sig.prom$tx_name, keytype="TXNAME", columns=columns(TxDb.Hsapiens.UCSC.hg38.knownGene))
+    sig.genes=mapIds(org.Hs.eg.db, keys=as.character(sig.prom$tx_id), column="SYMBOL", keytype="ENTREZID")
+    
+
+}
