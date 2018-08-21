@@ -215,10 +215,31 @@ if (FALSE) {
     snvs.wnt = filter(cosmic.mut, Gene.name %in% wnt)  # snvs present in genes in the wnt pathway
     snvs.bcat= filter(cosmic.mut, Gene.name %in% bcat) # snvs present in genes in the wnt pathway
 
+    snvs.gr=peak2gr(cosmic.mut)
     snvs.crc.gr=peak2gr(snvs.crc)
     snvs.wnt.gr=peak2gr(snvs.wnt)
     snvs.bcat.gr=peak2gr(snvs.bcat)
 
+    sum(overlapsAny(ori.24open.gr, snvs.crc.gr))
+    sum(overlapsAny(ori.24open.gr, snvs.wnt.gr))
+    sum(overlapsAny(ori.24open.gr, snvs.bcat.gr))
+
+    sum(overlapsAny(sig.24.op.gr, snvs.gr))
+    sum(overlapsAny(sig.24.op.gr, snvs.crc.gr))
+    sum(overlapsAny(sig.24.op.gr, snvs.wnt.gr))
+    sum(overlapsAny(sig.24.op.gr, snvs.bcat.gr))
+
+    sum(overlapsAny(sig.24.cl.gr, snvs.gr))
+    sum(overlapsAny(sig.24.cl.gr, snvs.crc.gr))
+    sum(overlapsAny(sig.24.cl.gr, snvs.wnt.gr))
+    sum(overlapsAny(sig.24.cl.gr, snvs.bcat.gr))
+
+    atac.muts.gr=subsetByOverlaps(snvs.gr, c(sig.24.op.gr, sig.24.cl.gr))
+    
+    atac.muts=cosmic.mut %>%
+        filter(name %in% atac.muts.gr$name)
+    
+    
 }    
 
     
