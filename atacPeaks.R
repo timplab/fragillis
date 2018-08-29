@@ -17,6 +17,9 @@ gs_auth(token = "~/googlesheets_token.rds")
 fullsheet=gs_title("Fragillis Data")
 dataloc=gs_read(fullsheet, ws="180608_dat")
 
+outsheet=gs_title("180824_fragillisresults")
+
+
 workdir="/atium/Data/NGS/Aligned/180806_fragillis"
 outdir="~/Dropbox/timplab_data/fragillis/180806_revision"
 
@@ -85,13 +88,49 @@ call.sig <- function(peaks, dataloc, timedo=24) {
     return(res.filt)
 }    
 
+promoter.ol <- function(peaks) {
+
+    peaks.gr=peak2gr(peaks)
+    
+    promoters=promoters(TxDb.Hsapiens.UCSC.hg38.knownGene)
+    gene.matches=findOverlaps(promoters, peaks.gr)
+
+    prom.matches=promoters[queryHits(gene.matches)]
+    
+    genes=bind_cols(tibble(promoter.chr=as.character(seqnames(prom.matches)),
+                 promoter.start=start(prom.matches),
+                 promoter.end=end(prom.matches),
+                 promoter.txid=prom.matches$tx_id,
+                 promoter.txname=prom.matches$tx_name,
+                 promoter.symbol=mapIds(org.Hs.eg.db, keys=as.character(prom.matches$tx_name), column="SYMBOL", keytype="UCSCKG")),
+                 peaks[subjectHits(gene.matches),])
+    
+}
+
+mut.ol <- function(muts, peaks) {
+
+    peaks.gr=peak2gr(peaks)
+    muts.gr=peak2gr(muts)
+    
+    mut.matches=findOverlaps(muts.gr, peaks.gr)
+
+    good.mut=bind_cols(peaks[subjectHits(mut.matches),],
+                     muts[queryHits(mut.matches),])
+    
+}
+
 
 
 ##Load peak files
 
 narrowpeak=c("chrom", "chromStart", "chromEnd", "name", "score", "strand", "signalValue", "pValue", "qValue", "peak")
+broadpeak=c("chrom", "chromStart", "chromEnd", "name", "score", "strand", "signalValue", "pValue", "qValue")
+
 
 merged=read_tsv(file.path(workdir, "sharpmerged_peaks.narrowPeak"), col_names=narrowpeak)
+broad.merged=read_tsv(file.path(workdir, "broadmerged_peaks.broadPeak"), col_names=broadpeak)
+
+broad.gr=peak2gr(broad.merged)
 merged.gr=peak2gr(merged)
 
 ori.24open=read_tsv(file.path(workdir, "old", "uniquepeaks.optimalset.24hrbft2.narrowPeak"), col_names=narrowpeak)
@@ -124,47 +163,46 @@ sum(overlapsAny(ori.48close.gr, merged.gr))/length(ori.48close.gr)
 
 ##Jawara filters here based on qval, I'm going to skip it for now
 
+##Call signficant peaks
 res.24.merged.filt=call.sig(merged, dataloc, timedo=24)
 res.48.merged.filt=call.sig(merged, dataloc, timedo=48)
 
-res.24.old.filt=call.sig(ori.24full, dataloc, timedo=24)
-res.48.old.filt=call.sig(ori.48full, dataloc, timedo=48)
+if (FALSE) {
+    gs_ws_new(outsheet, ws_title="narrow.24.significant", input=res.24.merged.filt)
+    gs_ws_new(outsheet, ws_title="narrow.48.significant", input=res.48.merged.filt)
+    
+    write_csv(res.24.merged.filt, file.path(outdir, "24hrsig.merged.csv"))
+    write_csv(res.48.merged.filt, file.path(outdir, "48hrsig.merged.csv"))
+}
+##call significant broad peaks
+broad.24.merged.filt=call.sig(broad.merged, dataloc, timedo=24)
+broad.48.merged.filt=call.sig(broad.merged, dataloc, timedo=48)
+
+if (FALSE) {
+    gs_ws_new(outsheet, ws_title="broad.24.significant", input=broad.24.merged.filt)
+    gs_ws_new(outsheet, ws_title="broad.48.significant", input=broad.48.merged.filt)
+    
+    write_csv(broad.24.merged.filt, file.path(outdir, "24hrsig.broad.csv"))
+    write_csv(broad.48.merged.filt, file.path(outdir, "48hrsig.broad.csv"))
+}
 
 
-write_csv(res.24.merged.filt, file.path(outdir, "24hrsig.merged.csv"))
-write_csv(res.48.merged.filt, file.path(outdir, "48hrsig.merged.csv"))
+if (FALSE) {
 
-write_csv(res.24.old.filt, file.path(outdir, "24hrsig.oldpeak.csv"))
-##No 48 hr sig peaks
+    res.24.old.filt=call.sig(ori.24full, dataloc, timedo=24)
+    res.48.old.filt=call.sig(ori.48full, dataloc, timedo=48)
 
-
-##Look for overlap
-sig.24.op.gr=peak2gr(filter(res.24.merged.filt, stat>0))
-sig.24.cl.gr=peak2gr(filter(res.24.merged.filt, stat<0))
-
-sum(overlapsAny(sig.24.op.gr, ori.24open.gr))/length(sig.24.op.gr)
-sum(overlapsAny(sig.24.cl.gr, ori.24close.gr))/length(sig.24.cl.gr)
-
-sig.48.op.gr=peak2gr(filter(res.48.merged.filt, stat>0))
-sig.48.cl.gr=peak2gr(filter(res.48.merged.filt, stat<0))
-
-sum(overlapsAny(sig.48.op.gr, ori.48open.gr))/length(sig.48.op.gr)
-sum(overlapsAny(sig.48.cl.gr, ori.48close.gr))/length(sig.48.cl.gr)
-
-
+    write_csv(res.24.old.filt, file.path(outdir, "24hrsig.oldpeak.csv"))
+}
+    
 
 ##look at promoter regions
 if (FALSE) {
-    promoters=promoters(TxDb.Hsapiens.UCSC.hg38.knownGene)
-    
-    sum(overlapsAny(sig.24.op.gr, promoters))
-    sum(overlapsAny(sig.24.cl.gr, promoters))
+    merged.24.genes=promoter.ol(res.24.merged.filt)
+    merged.48.genes=promoter.ol(res.48.merged.filt)
 
-    sig.op.prom=subsetByOverlaps(promoters, sig.24.op.gr)
-    sig.cl.prom=subsetByOverlaps(promoters, sig.24.cl.gr)
-    
-    sig.op.genes=mapIds(org.Hs.eg.db, keys=as.character(sig.op.prom$tx_name), column="SYMBOL", keytype="UCSCKG")
-    sig.cl.genes=mapIds(org.Hs.eg.db, keys=as.character(sig.cl.prom$tx_name), column="SYMBOL", keytype="UCSCKG")
+    broad.24.genes=promoter.ol(broad.24.merged.filt)
+    broad.48.genes=promoter.ol(broad.48.merged.filt)
     
 }
 
@@ -175,7 +213,7 @@ if (FALSE) {
     ##First load in files
     cosmic.mut=read_tsv(file.path(outdir, "CosmicGenomeScreensMutantExport.tsv.gz")) %>%
         rename_all(funs(gsub(" ", ".", .))) %>%
-        filter(Primary.site=="large_intestine") %>%
+        filter(Primary.site=="large_intestine")
 
     cosmic.mut=cosmic.mut %>%
         separate(Mutation.genome.position, into=c("chrom", "chromStart", "chromEnd"), sep="[:-]", convert=T) %>%
@@ -187,9 +225,6 @@ if (FALSE) {
     cosmic.mut=cosmic.mut %>%
         filter(!is.na(chromStart))
         
-
-    
-
     crc = c("AKT1", "AKT2","AKT3","APC","APC2","APPL1","ARAF","Axin1","AXIN2","BAD","BAX","BCL2","BIRC5","BRAF",
             "casp3","CASP9","CCND1","CTNNB1","CYCS","DCC","FOS","GSK3B","JUN","KRAS","LEF1","MAP2K1","MAPK1",
             "MAPK10","MAPK3","MAPK8","MAPK9","MLH1","MSH2","MSH3","MSH6","MYC","PIK3CA","PIK3CB","PIK3CD",
@@ -215,39 +250,63 @@ if (FALSE) {
     snvs.wnt = filter(cosmic.mut, Gene.name %in% wnt)  # snvs present in genes in the wnt pathway
     snvs.bcat= filter(cosmic.mut, Gene.name %in% bcat) # snvs present in genes in the wnt pathway
 
-    snvs.gr=peak2gr(cosmic.mut)
-    snvs.crc.gr=peak2gr(snvs.crc)
-    snvs.wnt.gr=peak2gr(snvs.wnt)
-    snvs.bcat.gr=peak2gr(snvs.bcat)
-
-    sum(overlapsAny(ori.24open.gr, snvs.crc.gr))
-    sum(overlapsAny(ori.24open.gr, snvs.wnt.gr))
-    sum(overlapsAny(ori.24open.gr, snvs.bcat.gr))
-
-    sum(overlapsAny(sig.24.op.gr, snvs.gr))
-    sum(overlapsAny(sig.24.op.gr, snvs.crc.gr))
-    sum(overlapsAny(sig.24.op.gr, snvs.wnt.gr))
-    sum(overlapsAny(sig.24.op.gr, snvs.bcat.gr))
-
-    sum(overlapsAny(sig.24.cl.gr, snvs.gr))
-    sum(overlapsAny(sig.24.cl.gr, snvs.crc.gr))
-    sum(overlapsAny(sig.24.cl.gr, snvs.wnt.gr))
-    sum(overlapsAny(sig.24.cl.gr, snvs.bcat.gr))
-
-    atac.muts.gr=subsetByOverlaps(snvs.gr, c(sig.24.op.gr, sig.24.cl.gr))
     
-    atac.muts=cosmic.mut %>%
-        filter(name %in% atac.muts.gr$name)
-    
+    merged.24.mut=mut.ol(cosmic.mut, res.24.merged.filt)
+    merged.48.mut=mut.ol(cosmic.mut, res.48.merged.filt)
+
+    broad.24.mut=mut.ol(cosmic.mut, broad.24.merged.filt)
+    broad.48.mut=mut.ol(cosmic.mut, broad.48.merged.filt)
     
 }    
-
     
 
 ##Check DMRs    
+if (FALSE) {
+
+    dmrs=read_tsv(file.path(outdir, "CosmicCompleteDifferentialMethylation.tsv.gz")) %>%
+        rename_all(funs(gsub(" ", ".", .)))  %>%
+        filter(PRIMARY_SITE=="large_intestine")
+
+    dmrs=dmrs %>%
+        rename(chrom=CHROMOSOME) %>%
+        rename(chromStart=POSITION) %>%
+        mutate(chrom=paste0("chr", chrom)) %>%
+        mutate(chrom=ifelse(chrom=="chr23", "chrX", chrom)) %>%
+        mutate(chrom=ifelse(chrom=="chr24", "chrY", chrom)) %>%
+        mutate(chromEnd=chromStart) %>%
+        mutate(strand=".", name=1:dim(dmrs)[1])
+
+    dmrs=dmrs %>%
+        filter(!is.na(chromStart))
+        
+    
+    merged.24.dmr=mut.ol(dmrs, res.24.merged.filt)
+    merged.48.dmr=mut.ol(dmrs, res.48.merged.filt)
+
+    broad.24.dmr=mut.ol(dmrs, broad.24.merged.filt)
+    broad.48.dmr=mut.ol(dmrs, broad.48.merged.filt)
+
+}    
+
+###HERE, also need to write to gsheets
+
+if (FALSE) {   
+
+    ##Check CTCF
+    caco.ctcf=read_tsv(file.path(outdir, "caco2_ctcfbinding_liftover_hg18_hg38.bed"), col_names=c("chrom", "chromStart", "chromEnd")) %>%
+        mutate(strand=".", name=1:length(chrom))
+
+    merged.24.ctcf=mut.ol(caco.ctcf, res.24.merged.filt)
+    merged.48.ctcf=mut.ol(caco.ctcf, res.48.merged.filt)
+
+    broad.24.ctcf=mut.ol(caco.ctcf, broad.24.merged.filt)
+    broad.48.ctcf=mut.ol(caco.ctcf, broad.48.merged.filt)
+
+
+}
  
- 
-##Check CTCF
+
+
 
 
 
