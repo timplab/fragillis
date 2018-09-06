@@ -19,7 +19,15 @@ if [ "$1" == "conda" ]; then
     conda create --name fragillis
     source activate fragillis
     conda install -c bioconda deeptools
+    conda install kallisto
     source deactivate
 
 fi
-    
+
+if [ "$1" == "kallisto.idx" ]; then
+    cd /mithril/Data/NGS/Reference/human_ensembl93/
+    wget ftp://ftp.ensembl.org/pub/release-93/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz
+    source activate fragillis
+    kallisto index --index=ensembl93.cdna Homo_sapiens.GRCh38.cdna.all.fa.gz
+    source deactivate
+fi

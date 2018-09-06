@@ -288,8 +288,6 @@ if (FALSE) {
 
 }    
 
-###HERE, also need to write to gsheets
-
 if (FALSE) {   
 
     ##Check CTCF
@@ -305,7 +303,13 @@ if (FALSE) {
 
 }
  
+###RNA and write all to gsheets
 
+if (FALSE) {
+
+    de.24=read_csv(file.path(workdir, "rna", "24hr.expression.changes.genelevel.rerun.pval01.csv"))
+    
+}
 
 
 
