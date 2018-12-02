@@ -20,11 +20,9 @@ if (!dir.exists(outdir)) {
 
 setwd(workdir)
 
-whichcomp=2
+whichcomp=3
 
-for (i in seq(whichcomp, dim(dataloc)[1], 3) {
-    print(file.exists(dataloc$ill.r1))
-    print(file.exists(dataloc$ill.r2))
+for (i in seq(whichcomp, dim(dataloc)[1], 3)) {
 
     system(paste0("java -jar ~/Code/Trimmomatic-0.38/trimmomatic-0.38.jar PE -phred33 -threads 6 ",
                   dataloc$ill.r1[i], " ", dataloc$ill.r2[i],
